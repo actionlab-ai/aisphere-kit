@@ -20,6 +20,7 @@ type Config struct {
 	PolicyEnforcer  string `json:"policy_enforcer" yaml:"policy_enforcer"`
 	PolicyAdapterID string `json:"policy_adapter_id" yaml:"policy_adapter_id"`
 	HTTPTimeout     string `json:"http_timeout" yaml:"http_timeout"`
+	DefaultScope    string `json:"default_scope" yaml:"default_scope"`
 	AllowAnonymous  bool   `json:"allow_anonymous" yaml:"allow_anonymous"`
 	AuditAsync      bool   `json:"audit_async" yaml:"audit_async"`
 	AuditQueue      int    `json:"audit_queue" yaml:"audit_queue"`

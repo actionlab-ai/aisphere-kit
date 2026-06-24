@@ -111,6 +111,9 @@ func Load(paths ...string) (*Config, error) {
 	if cfg.Casdoor.HTTPTimeout == "" {
 		cfg.Casdoor.HTTPTimeout = "10s"
 	}
+	if cfg.Casdoor.DefaultScope == "" {
+		cfg.Casdoor.DefaultScope = "openid profile email"
+	}
 	return cfg, cfg.Validate()
 }
 

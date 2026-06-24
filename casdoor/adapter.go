@@ -24,12 +24,13 @@ var (
 )
 
 type Adapter struct {
-	cfg     Config
-	client  *casdoorsdk.Client
-	retry   retry.Policy
-	logger  *slog.Logger
-	metrics *metrics.Metrics
-	timeout time.Duration
+	cfg        Config
+	client     *casdoorsdk.Client
+	retry      retry.Policy
+	logger     *slog.Logger
+	metrics    *metrics.Metrics
+	timeout    time.Duration
+	httpClient *http.Client
 }
 
 type Option func(*options)
@@ -64,9 +65,10 @@ func New(cfg Config, opts ...Option) *Adapter {
 	// Casdoor SDK exposes SetHttpClient as a package-level setting. Configure it
 	// once during adapter construction so SDK HTTP calls have a real network
 	// timeout instead of relying only on the outer context wrapper.
-	casdoorsdk.SetHttpClient(&http.Client{Timeout: timeout})
+	httpClient := &http.Client{Timeout: timeout}
+	casdoorsdk.SetHttpClient(httpClient)
 	l.Info("casdoor adapter creating", "client_id", cfg.ClientID, "allow_anonymous", cfg.AllowAnonymous, "http_timeout", timeout.String())
-	return &Adapter{cfg: cfg, client: casdoorsdk.NewClient(cfg.Endpoint, cfg.ClientID, cfg.ClientSecret, cfg.Certificate, cfg.Organization, cfg.Application), retry: retry.NewPolicy(retry.Config{Attempts: cfg.RetryAttempts, Backoff: cfg.RetryBackoff}), logger: l, metrics: opt.metrics, timeout: timeout}
+	return &Adapter{cfg: cfg, client: casdoorsdk.NewClient(cfg.Endpoint, cfg.ClientID, cfg.ClientSecret, cfg.Certificate, cfg.Organization, cfg.Application), retry: retry.NewPolicy(retry.Config{Attempts: cfg.RetryAttempts, Backoff: cfg.RetryBackoff}), logger: l, metrics: opt.metrics, timeout: timeout, httpClient: httpClient}
 }
 
 func (a *Adapter) Client() *casdoorsdk.Client { return a.client }
