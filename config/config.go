@@ -216,6 +216,11 @@ func (c *Config) Validate() error {
 			errs = append(errs, fmt.Errorf("casdoor endpoint/client_id/client_secret/organization/application are required"))
 		}
 	}
+	if c.Features.Authn {
+		if _, err := c.Casdoor.NormalizedCertificate(); err != nil {
+			errs = append(errs, fmt.Errorf("casdoor jwt certificate: %w", err))
+		}
+	}
 	if c.Features.Authz {
 		selectors := 0
 		for _, v := range []string{c.Casdoor.PermissionID, c.Casdoor.ModelID, c.Casdoor.ResourceID, c.Casdoor.EnforcerID, c.Casdoor.Owner} {

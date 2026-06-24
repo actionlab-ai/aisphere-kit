@@ -113,13 +113,28 @@ func NewRuntime(ctx context.Context, cfg *config.Config, opts ...RuntimeOption) 
 		rt.Logger.Info("objectstore disabled")
 	}
 	if cfg.Features.Authn || cfg.Features.Authz || cfg.Features.Audit || cfg.Features.Permission {
-		rt.Casdoor = casdoor.New(cfg.Casdoor, casdoor.WithLogger(rt.Logger), casdoor.WithMetrics(rt.Metrics))
+		started := time.Now()
+		rt.Logger.Debug("casdoor init started", "authn", cfg.Features.Authn, "authz", cfg.Features.Authz, "audit", cfg.Features.Audit, "permission", cfg.Features.Permission)
+		var adapter *casdoor.Adapter
+		var err error
+		if cfg.Features.Authn {
+			adapter, err = casdoor.NewChecked(cfg.Casdoor, casdoor.WithLogger(rt.Logger), casdoor.WithMetrics(rt.Metrics))
+		} else {
+			adapter = casdoor.New(cfg.Casdoor, casdoor.WithLogger(rt.Logger), casdoor.WithMetrics(rt.Metrics))
+		}
+		if err != nil {
+			_ = cleanups.Close()
+			rt.Logger.Error("casdoor init failed", "error", err)
+			return nil, nil, fmt.Errorf("init casdoor: %w", err)
+		}
+		rt.Casdoor = adapter
 		rt.Authn = rt.Casdoor
 		rt.Authz = rt.Casdoor
 		rt.Audit = rt.Casdoor
 		if cfg.Features.Permission {
 			rt.Permission = rt.Casdoor
 		}
+		rt.Logger.Info("casdoor init completed", "elapsed", time.Since(started).String())
 	} else {
 		rt.Logger.Info("casdoor disabled")
 	}

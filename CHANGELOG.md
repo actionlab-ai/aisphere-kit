@@ -1,11 +1,18 @@
+# Changelog
+
+## v0.1.2-casdoor-cert-fix
+
+- Added `casdoor.certificate_file` and certificate normalization for Casdoor JWT verification.
+- Added fail-fast startup validation when `features.authn=true`; missing/invalid Casdoor public certificate now stops startup.
+- Added `casdoor.NewChecked()` and wired starter runtime to use it for Authn.
+- Improved Casdoor adapter startup logs and rejected private-key configuration.
+
 
 ## v0.6.0
 
 - Added scenario-driven APIs for login/logout URL construction, OAuth state storage, token blacklist, DB transaction manager, SQL exec helper, pagination helper, Redis JSON cache helpers, key builder, and Casdoor/Casbin permission grants.
 - Runtime now exposes `Authn`, `Authz`, `Audit`, `Session`, `Tx`, `Database`, and `Permission` so components do not reassemble common dependencies.
 - Added `docs/SCENARIO_COVERAGE.md` to map business scenarios to packages.
-
-# Changelog
 
 ## v0.3.0
 

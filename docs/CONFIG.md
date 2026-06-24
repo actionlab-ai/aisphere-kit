@@ -58,7 +58,12 @@ casdoor:
   endpoint: ${AISPHERE_CASDOOR__ENDPOINT}
   client_id: ${AISPHERE_CASDOOR__CLIENT_ID}
   client_secret: ${AISPHERE_CASDOOR__CLIENT_SECRET}
+  # Required when features.authn=true. Use the public certificate/public key
+  # copied from the Casdoor Cert page. Do not configure the private key here.
   certificate: ${AISPHERE_CASDOOR__CERTIFICATE}
+  # Alternative for production: mount the public cert/key as a file. Inline
+  # certificate takes precedence over certificate_file.
+  # certificate_file: ./certs/casdoor-jwt-public.pem
   organization: aisphere
   application: aisphere-hub
   permission_id: aisphere/hub-permission
@@ -80,4 +85,23 @@ health:
 
 shutdown:
   timeout: 15s
+```
+
+## Casdoor JWT certificate
+
+When `features.authn=true`, `casdoor.certificate` or `casdoor.certificate_file` is required and validated during startup. This avoids delayed runtime failures such as `invalid key` on the first protected request.
+
+Use the **public certificate** or **public key** from the Casdoor Cert page that is selected by your Casdoor Application as its JWT certificate. The token header `kid` must match that certificate. Never place Casdoor's private key in service config.
+
+Accepted PEM block types:
+
+- `-----BEGIN CERTIFICATE-----`
+- `-----BEGIN PUBLIC KEY-----`
+- `-----BEGIN RSA PUBLIC KEY-----`
+
+Example with a mounted file:
+
+```yaml
+casdoor:
+  certificate_file: ./certs/casdoor-jwt-public.pem
 ```

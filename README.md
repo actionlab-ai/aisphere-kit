@@ -60,3 +60,7 @@ If cleanup fails, the business component should store an outbox job and retry. T
 ## PostgreSQL
 
 See [`docs/DB_POSTGRES.md`](docs/DB_POSTGRES.md) for PostgreSQL, auto-create database, JSONB, and safe pagination usage.
+
+## Casdoor JWT certificate
+
+When `features.authn=true`, configure `casdoor.certificate` or `casdoor.certificate_file` with the public certificate/public key from the Casdoor Cert page. The kit validates this at startup so JWT signing-key mistakes fail early. See [`docs/CASDOOR_CERTIFICATE.md`](docs/CASDOOR_CERTIFICATE.md).

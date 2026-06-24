@@ -1,3 +1,49 @@
+# aisphere-kit v0.1.2-casdoor-cert-fix
+
+This release hardens Casdoor JWT verification setup so bad public-key configuration fails during startup instead of on the first protected request.
+
+## Key changes
+
+- Added `casdoor.certificate_file` as an alternative to inline `casdoor.certificate`.
+- Added `casdoor.Config.NormalizedCertificate()` to trim, normalize CRLF/literal `\n`, and load mounted certificate files.
+- Added startup validation for `features.authn=true`: the Casdoor JWT public certificate/public key is now required and must be a PEM encoded RSA public certificate/key.
+- Added `casdoor.NewChecked()` and switched `starter.NewRuntime()` to use it when Authn is enabled.
+- Improved Casdoor adapter logs with `certificate_present` and `certificate_file` flags.
+- Rejects private keys in service config; Hub and other components must only consume Casdoor's public certificate/public key.
+
+## Config example
+
+```yaml
+features:
+  authn: true
+
+casdoor:
+  endpoint: "http://localhost:18000"
+  client_id: "aisphere-auth"
+  client_secret: "change-me"
+  organization: "aisphere"
+  application: "aisphere"
+  default_scope: "openid profile email"
+
+  # Option A: inline public cert/key copied from Casdoor Cert page
+  certificate: |
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
+
+  # Option B: mounted file. Inline certificate takes precedence if both are set.
+  # certificate_file: "./certs/casdoor-jwt-public.pem"
+```
+
+## Verification
+
+```bash
+go mod tidy
+go test ./...
+```
+
+Then restart the component and call a protected endpoint with a Casdoor access token.
+
 # aisphere-kit v0.7.0
 
 This release removes local sharing as an authorization source and moves resource sharing / permission mutation to Casdoor + Casbin.

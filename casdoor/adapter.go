@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/actionlab-ai/aisphere-kit/audit"
@@ -43,6 +44,23 @@ func WithLogger(l *slog.Logger) Option      { return func(o *options) { o.logger
 func WithMetrics(m *metrics.Metrics) Option { return func(o *options) { o.metrics = m } }
 
 func New(cfg Config, opts ...Option) *Adapter {
+	adapter, err := newAdapter(cfg, false, false, opts...)
+	if err != nil {
+		// Keep the legacy constructor non-breaking. Runtime/starter paths that need
+		// fail-fast validation should use NewChecked.
+		slog.Default().With("component", "casdoor", "endpoint", cfg.Endpoint).Warn("casdoor adapter config validation failed; continuing for compatibility", "error", err)
+	}
+	return adapter
+}
+
+// NewChecked constructs a Casdoor adapter with fail-fast JWT certificate
+// validation. Use it when features.authn=true so bad public-key config fails at
+// startup instead of on the first authenticated request.
+func NewChecked(cfg Config, opts ...Option) (*Adapter, error) {
+	return newAdapter(cfg, true, true, opts...)
+}
+
+func newAdapter(cfg Config, requireCertificate bool, validateProvidedCertificate bool, opts ...Option) (*Adapter, error) {
 	var opt options
 	for _, fn := range opts {
 		if fn != nil {
@@ -62,13 +80,24 @@ func New(cfg Config, opts ...Option) *Adapter {
 			l.Warn("casdoor http_timeout parse failed; using default", "value", cfg.HTTPTimeout, "error", err)
 		}
 	}
+
+	certificate := normalizePEMText(cfg.Certificate)
+	if requireCertificate || (validateProvidedCertificate && (certificate != "" || strings.TrimSpace(cfg.CertificateFile) != "")) {
+		cert, err := cfg.NormalizedCertificate()
+		if err != nil {
+			return nil, err
+		}
+		certificate = cert
+	}
+	cfg.Certificate = certificate
+
 	// Casdoor SDK exposes SetHttpClient as a package-level setting. Configure it
 	// once during adapter construction so SDK HTTP calls have a real network
 	// timeout instead of relying only on the outer context wrapper.
 	httpClient := &http.Client{Timeout: timeout}
 	casdoorsdk.SetHttpClient(httpClient)
-	l.Info("casdoor adapter creating", "client_id", cfg.ClientID, "allow_anonymous", cfg.AllowAnonymous, "http_timeout", timeout.String())
-	return &Adapter{cfg: cfg, client: casdoorsdk.NewClient(cfg.Endpoint, cfg.ClientID, cfg.ClientSecret, cfg.Certificate, cfg.Organization, cfg.Application), retry: retry.NewPolicy(retry.Config{Attempts: cfg.RetryAttempts, Backoff: cfg.RetryBackoff}), logger: l, metrics: opt.metrics, timeout: timeout, httpClient: httpClient}
+	l.Info("casdoor adapter creating", "client_id", cfg.ClientID, "allow_anonymous", cfg.AllowAnonymous, "http_timeout", timeout.String(), "certificate_present", certificate != "", "certificate_file", cfg.CertificateFile != "")
+	return &Adapter{cfg: cfg, client: casdoorsdk.NewClient(cfg.Endpoint, cfg.ClientID, cfg.ClientSecret, certificate, cfg.Organization, cfg.Application), retry: retry.NewPolicy(retry.Config{Attempts: cfg.RetryAttempts, Backoff: cfg.RetryBackoff}), logger: l, metrics: opt.metrics, timeout: timeout, httpClient: httpClient}, nil
 }
 
 func (a *Adapter) Client() *casdoorsdk.Client { return a.client }
