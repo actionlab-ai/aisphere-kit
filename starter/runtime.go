@@ -23,10 +23,12 @@ import (
 )
 
 type Runtime struct {
-	Config       *config.Config
-	Logger       *slog.Logger
-	DB           *gorm.DB
-	SQL          *db.MySQL
+	Config   *config.Config
+	Logger   *slog.Logger
+	DB       *gorm.DB
+	Database db.Database
+	// Deprecated: use Database. Kept for compatibility with older services.
+	SQL          db.Database
 	Redis        redis.UniversalClient
 	RedisRuntime *cache.Redis
 	S3           objectstore.Client
@@ -72,17 +74,18 @@ func NewRuntime(ctx context.Context, cfg *config.Config, opts ...RuntimeOption) 
 		rt.Logger.Info("metrics disabled")
 	}
 	if cfg.Features.DB {
-		my, err := db.NewMySQL(ctx, cfg.Database, db.WithLogger(rt.Logger), db.WithMetrics(rt.Metrics))
+		sqldb, err := db.NewDatabase(ctx, cfg.Database, db.WithLogger(rt.Logger), db.WithMetrics(rt.Metrics))
 		if err != nil {
 			_ = cleanups.Close()
 			return nil, nil, err
 		}
-		rt.SQL = my
-		rt.DB = my.DB
-		rt.Tx = db.NewTxManager(my.DB, rt.Logger)
-		cleanups.Add(my.Close)
+		rt.Database = sqldb
+		rt.SQL = sqldb
+		rt.DB = sqldb.GORM()
+		rt.Tx = db.NewTxManager(sqldb.GORM(), rt.Logger)
+		cleanups.Add(sqldb.Close)
 	} else {
-		rt.Logger.Info("mysql disabled")
+		rt.Logger.Info("database disabled")
 	}
 	if cfg.Features.Cache {
 		r, err := cache.NewRedis(ctx, cfg.Redis, cache.WithLogger(rt.Logger), cache.WithMetrics(rt.Metrics))

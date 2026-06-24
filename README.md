@@ -55,3 +55,8 @@ err := rt.Permission.DeleteResourcePolicies(ctx, resource.AIHubSkill(skillID))
 ```
 
 If cleanup fails, the business component should store an outbox job and retry. The business component must always check that the resource still exists before checking authorization.
+
+
+## PostgreSQL
+
+See [`docs/DB_POSTGRES.md`](docs/DB_POSTGRES.md) for PostgreSQL, auto-create database, JSONB, and safe pagination usage.

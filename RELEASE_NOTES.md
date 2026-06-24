@@ -31,3 +31,12 @@ The sandbox environment cannot fetch external modules, so full `go test ./...` m
 go mod tidy
 go test ./...
 ```
+
+
+## PostgreSQL DB baseline fixes
+
+- Added `database.auto_create_database`, `database.maintenance_db`, and legacy `database.autoCreate` alias.
+- Added `Runtime.Database` while keeping `Runtime.SQL` as a compatibility alias.
+- Health checks now report the actual DB driver name.
+- Added safe pagination allowlist support.
+- Removed stale local ACL-table references from docs.

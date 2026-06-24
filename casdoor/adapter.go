@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/actionlab-ai/aisphere-kit/audit"
@@ -28,6 +29,7 @@ type Adapter struct {
 	retry   retry.Policy
 	logger  *slog.Logger
 	metrics *metrics.Metrics
+	timeout time.Duration
 }
 
 type Option func(*options)
@@ -51,8 +53,20 @@ func New(cfg Config, opts ...Option) *Adapter {
 		l = slog.Default()
 	}
 	l = l.With("component", "casdoor", "endpoint", cfg.Endpoint, "organization", cfg.Organization, "application", cfg.Application)
-	l.Info("casdoor adapter creating", "client_id", cfg.ClientID, "allow_anonymous", cfg.AllowAnonymous)
-	return &Adapter{cfg: cfg, client: casdoorsdk.NewClient(cfg.Endpoint, cfg.ClientID, cfg.ClientSecret, cfg.Certificate, cfg.Organization, cfg.Application), retry: retry.NewPolicy(retry.Config{Attempts: cfg.RetryAttempts, Backoff: cfg.RetryBackoff}), logger: l, metrics: opt.metrics}
+	timeout := 10 * time.Second
+	if cfg.HTTPTimeout != "" {
+		if d, err := time.ParseDuration(cfg.HTTPTimeout); err == nil && d > 0 {
+			timeout = d
+		} else if err != nil {
+			l.Warn("casdoor http_timeout parse failed; using default", "value", cfg.HTTPTimeout, "error", err)
+		}
+	}
+	// Casdoor SDK exposes SetHttpClient as a package-level setting. Configure it
+	// once during adapter construction so SDK HTTP calls have a real network
+	// timeout instead of relying only on the outer context wrapper.
+	casdoorsdk.SetHttpClient(&http.Client{Timeout: timeout})
+	l.Info("casdoor adapter creating", "client_id", cfg.ClientID, "allow_anonymous", cfg.AllowAnonymous, "http_timeout", timeout.String())
+	return &Adapter{cfg: cfg, client: casdoorsdk.NewClient(cfg.Endpoint, cfg.ClientID, cfg.ClientSecret, cfg.Certificate, cfg.Organization, cfg.Application), retry: retry.NewPolicy(retry.Config{Attempts: cfg.RetryAttempts, Backoff: cfg.RetryBackoff}), logger: l, metrics: opt.metrics, timeout: timeout}
 }
 
 func (a *Adapter) Client() *casdoorsdk.Client { return a.client }

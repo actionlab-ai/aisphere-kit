@@ -15,3 +15,15 @@ go mod tidy
 ```
 
 The package intentionally keeps Kratos lifecycle, transport and middleware as the service skeleton. `kratosx` only wires Aisphere defaults around Kratos; it does not replace Kratos.
+
+
+## PostgreSQL DB checks
+
+Run locally with module download access:
+
+```bash
+go mod tidy
+go test ./...
+```
+
+This package includes unit coverage for driver normalization, PostgreSQL DSN normalization, maintenance DSN derivation, JSONB scan/value behavior, and framework-independent permission/resource/auth packages.

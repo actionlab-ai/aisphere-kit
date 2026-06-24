@@ -23,7 +23,7 @@ type Config struct {
 	Server      ServerConfig            `json:"server" yaml:"server"`
 	Features    FeatureConfig           `json:"features" yaml:"features"`
 	Log         logx.Config             `json:"log" yaml:"log"`
-	Database    db.MySQLConfig          `json:"database" yaml:"database"`
+	Database    db.DatabaseConfig       `json:"database" yaml:"database"`
 	Redis       cache.RedisConfig       `json:"redis" yaml:"redis"`
 	ObjectStore objectstore.MinIOConfig `json:"objectstore" yaml:"objectstore"`
 	Casdoor     casdoor.Config          `json:"casdoor" yaml:"casdoor"`
@@ -74,7 +74,7 @@ func Default() *Config {
 		Server:      ServerConfig{HTTP: EndpointConfig{Addr: "0.0.0.0:8000", Timeout: "10s"}, GRPC: EndpointConfig{Addr: "0.0.0.0:9000", Timeout: "10s"}},
 		Features:    FeatureConfig{DB: true, Cache: true, S3: true, Authn: true, Authz: true, Audit: true, Metrics: true, Tracing: true, Session: true, Permission: true, Sharing: false},
 		Log:         logx.Config{Level: "info", Format: "json"},
-		Database:    db.MySQLConfig{Driver: "mysql", MaxOpenConns: 50, MaxIdleConns: 10, ConnMaxLifetime: "1h", SlowThreshold: "500ms", LogLevel: "warn"},
+		Database:    db.DatabaseConfig{Driver: "mysql", MaxOpenConns: 50, MaxIdleConns: 10, ConnMaxLifetime: "1h", SlowThreshold: "500ms", LogLevel: "warn", MaintenanceDB: "postgres"},
 		Redis:       cache.RedisConfig{Mode: "single", Addr: "127.0.0.1:6379", DialTimeout: "5s", ReadTimeout: "3s", WriteTimeout: "3s"},
 		ObjectStore: objectstore.MinIOConfig{Provider: "minio", Endpoint: "127.0.0.1:9000", Bucket: "aisphere", UseSSL: false},
 		Metrics:     metrics.Config{Namespace: "aisphere"},
@@ -173,8 +173,8 @@ func (c *Config) Validate() error {
 		}
 	}
 	if c.Features.DB {
-		if c.Database.Driver != "" && c.Database.Driver != "mysql" {
-			errs = append(errs, fmt.Errorf("database.driver only supports mysql"))
+		if _, err := c.Database.Normalize(); err != nil {
+			errs = append(errs, err)
 		}
 		if c.Database.DSN == "" {
 			errs = append(errs, fmt.Errorf("database.dsn is required"))

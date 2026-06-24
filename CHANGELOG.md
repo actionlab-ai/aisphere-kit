@@ -2,7 +2,7 @@
 ## v0.6.0
 
 - Added scenario-driven APIs for login/logout URL construction, OAuth state storage, token blacklist, DB transaction manager, SQL exec helper, pagination helper, Redis JSON cache helpers, key builder, and Casdoor/Casbin permission grants.
-- Runtime now exposes `Authn`, `Authz`, `Audit`, `Session`, `Tx`, and `Shares` so components do not reassemble common dependencies.
+- Runtime now exposes `Authn`, `Authz`, `Audit`, `Session`, `Tx`, `Database`, and `Permission` so components do not reassemble common dependencies.
 - Added `docs/SCENARIO_COVERAGE.md` to map business scenarios to packages.
 
 # Changelog

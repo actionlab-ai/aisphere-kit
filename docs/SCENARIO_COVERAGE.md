@@ -48,7 +48,7 @@ This document maps common AI Sphere component scenarios to packages in `github.c
 |---|---|---|
 | Load config | `config` | `Load(paths...)`, env override `AISPHERE_*` |
 | Build component runtime | `starter` | `NewRuntime`, `NewRuntimeFromConfig` |
-| Unified resources | `starter.Runtime` | `DB`, `Redis`, `S3`, `Authn`, `Authz`, `Audit`, `Session`, `Shares` |
+| Unified resources | `starter.Runtime` | `DB`, `Database`, `Redis`, `S3`, `Authn`, `Authz`, `Audit`, `Session`, `Permission` |
 | Health check | `health` | readiness/liveness checks for initialized dependencies |
 | Logging | `logx` | `slog` JSON/text handlers, context logger |
 | Metrics | `metrics` | dependency latency/errors and request counters/duration |
@@ -61,5 +61,5 @@ The kit intentionally does not implement Hub/Runtime/Sandbox business tables or 
 - business validation
 - HTTP/gRPC/proto definitions
 - usecase orchestration
-- migrations beyond the common `resource_shares` table
+- component-specific migrations such as share links, invitations, domain resources, and outbox jobs
 - component-specific cache keys and object storage prefixes

@@ -29,7 +29,7 @@ func (a *Adapter) GrantRole(ctx context.Context, grant permission.Grant) error {
 	if err != nil {
 		return err
 	}
-	actions, err := permission.RoleActions(g.Role, g.Actions)
+	actions, err := permission.RoleActionsForResource(g.Resource, g.Role, g.Actions)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (a *Adapter) Revoke(ctx context.Context, grant permission.Grant) error {
 	}
 	actions := []string{g.Action}
 	if g.Action == "" {
-		actions, err = permission.RoleActions(g.Role, g.Actions)
+		actions, err = permission.RoleActionsForResource(g.Resource, g.Role, g.Actions)
 		if err != nil {
 			return err
 		}

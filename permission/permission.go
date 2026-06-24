@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/actionlab-ai/aisphere-kit/principal"
@@ -39,6 +40,49 @@ const (
 	RoleEditor = "editor"
 	RoleOwner  = "owner"
 )
+
+// RoleActionMapper maps a resource + logical role to concrete Casbin actions.
+// Components can replace the default mapper to support non-Skill resources such
+// as agents, workflows, sandbox instances, or runtime sessions.
+type RoleActionMapper func(resource.Name, string, []string) ([]string, error)
+
+var roleMapper = struct {
+	sync.RWMutex
+	fn RoleActionMapper
+}{fn: DefaultRoleActionMapper}
+
+// SetRoleActionMapper replaces the process-wide role mapper. It is intended for
+// application bootstrap code. Passing nil restores the default mapper.
+func SetRoleActionMapper(fn RoleActionMapper) {
+	roleMapper.Lock()
+	defer roleMapper.Unlock()
+	if fn == nil {
+		roleMapper.fn = DefaultRoleActionMapper
+		return
+	}
+	roleMapper.fn = fn
+}
+
+// DefaultRoleActionMapper keeps the initial AIHub Skill role mapping for
+// compatibility. For non-skill resources, callers should either pass explicit
+// custom actions or install their own mapper at startup.
+func DefaultRoleActionMapper(res resource.Name, role string, custom []string) ([]string, error) {
+	if len(custom) > 0 {
+		return cleanActions(custom), nil
+	}
+	switch role {
+	case RoleViewer:
+		return []string{"skill.read", "skill.download"}, nil
+	case RoleEditor:
+		return []string{"skill.read", "skill.download", "skill.update", "skill.upload", "skill.publish"}, nil
+	case RoleOwner:
+		return []string{"skill.read", "skill.download", "skill.update", "skill.upload", "skill.publish", "skill.share", "skill.delete"}, nil
+	case "":
+		return nil, ErrEmptyRole
+	default:
+		return nil, fmt.Errorf("%w: %s", ErrUnsupportedRole, role)
+	}
+}
 
 // Grant represents one logical permission grant. If Role is set, Actions may be
 // empty and the manager can expand the role to one or more concrete actions.
@@ -175,21 +219,17 @@ func NormalizeShare(req ShareRequest) (Grant, error) {
 }
 
 func RoleActions(role string, custom []string) ([]string, error) {
-	if len(custom) > 0 {
-		return cleanActions(custom), nil
+	return RoleActionsForResource("", role, custom)
+}
+
+func RoleActionsForResource(res resource.Name, role string, custom []string) ([]string, error) {
+	roleMapper.RLock()
+	fn := roleMapper.fn
+	roleMapper.RUnlock()
+	if fn == nil {
+		fn = DefaultRoleActionMapper
 	}
-	switch role {
-	case RoleViewer:
-		return []string{"skill.read", "skill.download"}, nil
-	case RoleEditor:
-		return []string{"skill.read", "skill.download", "skill.update", "skill.upload", "skill.publish"}, nil
-	case RoleOwner:
-		return []string{"skill.read", "skill.download", "skill.update", "skill.upload", "skill.publish", "skill.share", "skill.delete"}, nil
-	case "":
-		return nil, ErrEmptyRole
-	default:
-		return nil, fmt.Errorf("%w: %s", ErrUnsupportedRole, role)
-	}
+	return fn(res, role, custom)
 }
 
 func cleanActions(in []string) []string {

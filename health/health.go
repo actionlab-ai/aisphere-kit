@@ -31,7 +31,13 @@ func Check(ctx context.Context, rt *starter.Runtime) []Result {
 	logx.FromContext(ctx).Debug("readiness check started", "timeout", timeout.String())
 	var out []Result
 	if rt.SQL != nil {
-		out = append(out, result("mysql", func() error { return rt.SQL.Ping(ctx) }))
+		name := "database"
+		if rt.Database != nil && rt.Database.Driver() != "" {
+			name = rt.Database.Driver()
+		} else if rt.SQL != nil && rt.SQL.Driver() != "" {
+			name = rt.SQL.Driver()
+		}
+		out = append(out, result(name, func() error { return rt.SQL.Ping(ctx) }))
 	}
 	if rt.RedisRuntime != nil {
 		out = append(out, result("redis", func() error { return rt.RedisRuntime.Ping(ctx) }))
