@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/actionlab-ai/aisphere-kit/access"
 	"github.com/actionlab-ai/aisphere-kit/audit"
 	"github.com/actionlab-ai/aisphere-kit/authn"
 	"github.com/actionlab-ai/aisphere-kit/authz"
@@ -36,6 +37,7 @@ type Runtime struct {
 	Authn        authn.Authenticator
 	Authz        authz.Authorizer
 	Audit        audit.Recorder
+	Access       *access.Guard
 	Session      *session.Manager
 	Tx           *db.TxManager
 	Permission   permission.Manager
@@ -138,6 +140,13 @@ func NewRuntime(ctx context.Context, cfg *config.Config, opts ...RuntimeOption) 
 	} else {
 		rt.Logger.Info("casdoor disabled")
 	}
+	rt.Access = access.NewGuard(access.Options{
+		Authz:     rt.Authz,
+		Audit:     rt.Audit,
+		Logger:    rt.Logger,
+		Component: cfg.App.Name,
+	})
+	rt.Logger.Info("access guard initialized", "authz", rt.Authz != nil, "audit", rt.Audit != nil)
 	rt.Logger.Info("aisphere runtime init completed", "elapsed", time.Since(startedAll).String())
 	return rt, cleanups.Close, nil
 }
